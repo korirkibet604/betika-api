@@ -114,8 +114,13 @@ class BetikaApiService {
   }
 
   // Get jackpot events
-  async getJackpotEvents() {
+  async getJackpotData() {
     const url = `${this.baseUrl}${BETIKA_API.endpoints.jackpot}`;
+    return this.fetchWithTimeout(url);
+  }
+
+  async getJackpotEvents(eventId) {
+    const url = `${this.baseUrl}${BETIKA_API.endpoints.jackpot}?id=${eventId}`;
     return this.fetchWithTimeout(url);
   }
 
@@ -152,8 +157,11 @@ async function updateCache() {
     cache.sports = sportsData.data || [];
 
     // Fetch jackpots
-    const jackpotData = await apiService.getJackpotEvents();
+    const jackpotData = await apiService.getJackpotData();
     cache.jackpots = jackpotData || [];
+
+    const jackpotEvents = await apiService.getJackpotEvents({eventId = 2539});
+    cache.jackpotEvents = jackpotEvents || [];
 
     // Fetch previous jackpots
     const previousJackpotData = await apiService.getPreviousJackpots();
@@ -550,7 +558,26 @@ app.get("/api/match/:matchId", async (req, res) => {
 // Get jackpot events
 app.get("/api/jackpot", async (req, res) => {
   try {
-    const data = await apiService.getJackpotEvents();
+    const data = await apiService.getJackpotData();
+    res.json({
+      success: true,
+      data: data || [],
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch jackpot events",
+      message: error.message,
+    });
+  }
+});
+
+app.get("/api/jackpot/:eventId", async (req, res) => {
+  const { eventId } = req.params;
+
+  try {
+    const data = await apiService.getJackpotEvents(eventId);
     res.json({
       success: true,
       data: data || [],
