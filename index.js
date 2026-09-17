@@ -160,7 +160,7 @@ async function updateCache() {
     const jackpotData = await apiService.getJackpotData();
     cache.jackpots = jackpotData || [];
 
-    const jackpotEvents = await apiService.getJackpotEvents({eventId = 2539});
+    const jackpotEvents = await apiService.getJackpotEvents({eventId : 2539});
     cache.jackpotEvents = jackpotEvents || [];
 
     // Fetch previous jackpots
