@@ -120,7 +120,7 @@ class BetikaApiService {
   }
 
   async getJackpotEvents(eventId) {
-    const url = `${this.baseUrl}${BETIKA_API.endpoints.jackpot}?id=${eventId}`;
+    const url = `${this.baseUrl}$/event?id=${eventId}`;
     return this.fetchWithTimeout(url);
   }
 
