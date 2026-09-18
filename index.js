@@ -14,6 +14,7 @@ const BETIKA_API = {
     match: "/uo/match",
     sport: "/uo/sport",
     jackpot: "/jackpot/events",
+    jackpotEvent: "/jackpot/event",   // <-- add this
     previousJackpot: "/jackpot/previous",
     boosted: "/boosted/events",
   },
@@ -120,7 +121,7 @@ class BetikaApiService {
   }
 
   async getJackpotEvents(eventId) {
-    const url = `${this.baseUrl}$/event?id=${eventId}`;
+    const url = `${this.baseUrl}${BETIKA_API.endpoints.jackpotEvent}?id=${eventId}`;
     return this.fetchWithTimeout(url);
   }
 
@@ -160,7 +161,7 @@ async function updateCache() {
     const jackpotData = await apiService.getJackpotData();
     cache.jackpots = jackpotData || [];
 
-    const jackpotEvents = await apiService.getJackpotEvents({eventId : 2539});
+    const jackpotEvents = await apiService.getJackpotEvents(2539);
     cache.jackpotEvents = jackpotEvents || [];
 
     // Fetch previous jackpots
@@ -575,20 +576,16 @@ app.get("/api/jackpot", async (req, res) => {
 
 app.get("/api/jackpot/:eventId", async (req, res) => {
   const { eventId } = req.params;
-
   try {
-    const data = await apiService.getJackpotEvents(eventId);
+    const payload = await apiService.getJackpotEvents(eventId);
     res.json({
       success: true,
-      data: data || [],
+      meta: payload?.meta || null,
+      data: payload?.data || [],
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch jackpot events",
-      message: error.message,
-    });
+    res.status(500).json({ success: false, error: "Failed to fetch jackpot event", message: error.message });
   }
 });
 
