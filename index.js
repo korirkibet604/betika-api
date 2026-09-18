@@ -24,6 +24,7 @@ const BETIKA_API = {
 let cache = {
   matches: [],
   jackpots: [],
+  jackpotEvents: null,   // <-- add
   previousJackpots: [],
   boostedEvents: [],
   sports: [],
@@ -161,8 +162,10 @@ async function updateCache() {
     const jackpotData = await apiService.getJackpotData();
     cache.jackpots = jackpotData || [];
 
-    const jackpotEvents = await apiService.getJackpotEvents(2539);
-    cache.jackpotEvents = jackpotEvents || [];
+    const firstId = Array.isArray(jackpotData) ? jackpotData[0]?.id : null;
+       if (firstId) {
+       cache.jackpotEvents = await apiService.getJackpotEvents(firstId);
+    }
 
     // Fetch previous jackpots
     const previousJackpotData = await apiService.getPreviousJackpots();
@@ -185,8 +188,19 @@ async function updateCache() {
 async function updateJackpotCache() {
   console.log("🔄 Updating jackpot cache...");
   try {
-    const jackpotData = await apiService.getJackpotEvents();
-    cache.jackpots = jackpotData || [];
+    // get the list, then fetch each event's detail
+    const list = await apiService.getJackpotData();       // array of metas
+    const events = await Promise.all(
+      (list || []).map(async (meta) => {
+        try {
+          const detail = await apiService.getJackpotEvents(meta.id);
+          return { meta: detail?.meta || meta, data: detail?.data || [] };
+        } catch (e) {
+          return { meta, data: [] };
+        }
+      })
+    );
+    cache.jackpotEvents = events;
     cache.lastJackpotUpdate = new Date().toISOString();
     console.log(`✅ Jackpot cache updated at ${cache.lastJackpotUpdate}`);
   } catch (error) {
@@ -574,21 +588,6 @@ app.get("/api/jackpot", async (req, res) => {
   }
 });
 
-app.get("/api/jackpot/:eventId", async (req, res) => {
-  const { eventId } = req.params;
-  try {
-    const payload = await apiService.getJackpotEvents(eventId);
-    res.json({
-      success: true,
-      meta: payload?.meta || null,
-      data: payload?.data || [],
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: "Failed to fetch jackpot event", message: error.message });
-  }
-});
-
 // Get previous jackpots
 app.get("/api/jackpot/previous", async (req, res) => {
   try {
@@ -622,6 +621,21 @@ app.get("/api/jackpot/boosted", async (req, res) => {
       error: "Failed to fetch boosted events",
       message: error.message,
     });
+  }
+});
+
+app.get("/api/jackpot/:eventId", async (req, res) => {
+  const { eventId } = req.params;
+  try {
+    const payload = await apiService.getJackpotEvents(eventId);
+    res.json({
+      success: true,
+      meta: payload?.meta || null,
+      data: payload?.data || [],
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Failed to fetch jackpot event", message: error.message });
   }
 });
 
